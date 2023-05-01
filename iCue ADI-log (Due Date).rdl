@@ -1,0 +1,1505 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Report MustUnderstand="df" xmlns="http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner" xmlns:df="http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition/defaultfontfamily" xmlns:am="http://schemas.microsoft.com/sqlserver/reporting/authoringmetadata">
+  <rd:ReportUnitType>Inch</rd:ReportUnitType>
+  <rd:ReportID>d7c48e19-0d73-4149-bfb3-1d995adf5589</rd:ReportID>
+  <am:AuthoringMetadata>
+    <am:CreatedBy>
+      <am:Name>PBIRB</am:Name>
+      <am:Version>15.7.1802.126</am:Version>
+    </am:CreatedBy>
+    <am:UpdatedBy>
+      <am:Name>PBIRB</am:Name>
+      <am:Version>15.7.1802.126</am:Version>
+    </am:UpdatedBy>
+    <am:LastModifiedTimestamp>2023-05-01T11:42:47.2282034Z</am:LastModifiedTimestamp>
+  </am:AuthoringMetadata>
+  <df:DefaultFontFamily>Segoe UI</df:DefaultFontFamily>
+  <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="PBI_WS_RWATestDashboard_iCueADIlogDueDate">
+      <rd:SecurityType>None</rd:SecurityType>
+      <ConnectionProperties>
+        <DataProvider>PBIDATASET</DataProvider>
+        <ConnectString>Data Source=pbiazure://api.powerbi.com/;Identity Provider="https://login.microsoftonline.com/common, https://analysis.windows.net/powerbi/api, f0b72488-7082-488a-a7e8-eada97bd842d";Initial Catalog=sobe_wowvirtualserver-88fbd799-4384-4865-8cfb-6006a3f83141;Integrated Security=ClaimsToken</ConnectString>
+      </ConnectionProperties>
+      <rd:DataSourceID>0d9c6a09-6aaf-445c-8616-cea1353fb6d1</rd:DataSourceID>
+      <rd:PowerBIWorkspaceName>PBI_WS_RWA Test Dashboard</rd:PowerBIWorkspaceName>
+      <rd:PowerBIDatasetName>iCue ADI-log (Due Date)</rd:PowerBIDatasetName>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="ADI_Items_by_Due_Date_Status">
+      <Query>
+        <DataSourceName>PBI_WS_RWATestDashboard_iCueADIlogDueDate</DataSourceName>
+        <rd:DesignerState>
+          <QueryDefinition xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/AnalysisServices/QueryDefinition">
+            <CommandType>DAX</CommandType>
+            <Type>Query</Type>
+            <QuerySpecification xsi:type="MDXQuerySpecification">
+              <Select>
+                <Items>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>Due Date Status</DimensionName>
+                      <HierarchyName>Status Message</HierarchyName>
+                      <HierarchyUniqueName>[Due Date Status].[Status Message]</HierarchyUniqueName>
+                      <LevelName>Status Message</LevelName>
+                      <UniqueName>[Due Date Status].[Status Message].[Status Message]</UniqueName>
+                    </ID>
+                    <ItemCaption>Status Message</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>Due Date Status</DimensionName>
+                      <HierarchyName>Status</HierarchyName>
+                      <HierarchyUniqueName>[Due Date Status].[Status]</HierarchyUniqueName>
+                      <LevelName>Status</LevelName>
+                      <UniqueName>[Due Date Status].[Status].[Status]</UniqueName>
+                    </ID>
+                    <ItemCaption>Status</ItemCaption>
+                  </Item>
+                </Items>
+              </Select>
+              <AutoExecute>false</AutoExecute>
+              <From>Model</From>
+              <Filter>
+                <FilterItems />
+              </Filter>
+              <Calculations />
+              <Aggregates />
+              <QueryProperties />
+            </QuerySpecification>
+            <Query>
+              <Statement>// DAX Query
+DEFINE
+	VAR __DS0FilterTable = 
+		FILTER(
+			KEEPFILTERS(VALUES('ADI Log'[ADI Status])),
+			NOT('ADI Log'[ADI Status] IN {"Closed"})
+		)
+
+	VAR __DS0Core = 
+		SUMMARIZECOLUMNS(
+			'ADI Log'[Assigned To.title],
+			ROLLUPADDISSUBTOTAL(
+				ROLLUPGROUP('Due Date Status'[Status Message], 'Due Date Status'[Status]), "IsGrandTotalColumnTotal"
+			),
+			__DS0FilterTable,
+			"CountStatus", CALCULATE(COUNTA('ADI Log'[Status]))
+		)
+
+	VAR __DS0CoreOnlyOutputTotals = 
+		SELECTCOLUMNS(
+			KEEPFILTERS(FILTER(KEEPFILTERS(__DS0Core), [IsGrandTotalColumnTotal] = FALSE)),
+			"'ADI Log'[Assigned To.title]", 'ADI Log'[Assigned To.title],
+			"'Due Date Status'[Status Message]", 'Due Date Status'[Status Message],
+			"'Due Date Status'[Status]", 'Due Date Status'[Status],
+			"CountStatus", [CountStatus]
+		)
+
+	VAR __DS0CoreTableByDM0 = 
+		SELECTCOLUMNS(
+			KEEPFILTERS(FILTER(KEEPFILTERS(__DS0Core), [IsGrandTotalColumnTotal] = TRUE)),
+			"'ADI Log'[Assigned To.title]", 'ADI Log'[Assigned To.title],
+			"SortBy_DM0_0", [CountStatus]
+		)
+
+	VAR __DS0PrimaryWithSortColumns = 
+		NATURALLEFTOUTERJOIN(
+			SUMMARIZE(__DS0Core, 'ADI Log'[Assigned To.title]),
+			__DS0CoreTableByDM0
+		)
+
+	VAR __DS0PrimaryWindowed = 
+		TOPN(201, __DS0PrimaryWithSortColumns, [SortBy_DM0_0], 0, 'ADI Log'[Assigned To.title], 1)
+
+	VAR __DS0SecondaryBase = 
+		SUMMARIZE(
+			__DS0CoreOnlyOutputTotals,
+			'Due Date Status'[Status Message],
+			'Due Date Status'[Status]
+		)
+
+	VAR __DS0Secondary = 
+		TOPN(
+			62,
+			__DS0SecondaryBase,
+			'Due Date Status'[Status],
+			1,
+			'Due Date Status'[Status Message],
+			1
+		)
+
+	VAR __DS0BodyLimited = 
+		NATURALLEFTOUTERJOIN(
+			__DS0PrimaryWindowed,
+			SUBSTITUTEWITHINDEX(
+				__DS0CoreOnlyOutputTotals,
+				"ColumnIndex",
+				__DS0Secondary,
+				'Due Date Status'[Status],
+				ASC,
+				'Due Date Status'[Status Message],
+				ASC
+			)
+		)
+
+EVALUATE
+	__DS0Secondary
+
+ORDER BY
+	'Due Date Status'[Status], 'Due Date Status'[Status Message]
+
+EVALUATE
+	__DS0BodyLimited
+
+ORDER BY
+	[SortBy_DM0_0] DESC, 'ADI Log'[Assigned To.title], [ColumnIndex]
+</Statement>
+              <ParameterDefinitions />
+            </Query>
+          </QueryDefinition>
+        </rd:DesignerState>
+        <CommandText>// DAX Query
+DEFINE
+	VAR __DS0FilterTable = 
+		FILTER(
+			KEEPFILTERS(VALUES('ADI Log'[ADI Status])),
+			NOT('ADI Log'[ADI Status] IN {"Closed"})
+		)
+
+	VAR __DS0Core = 
+		SUMMARIZECOLUMNS(
+			'ADI Log'[Assigned To.title],
+			ROLLUPADDISSUBTOTAL(
+				ROLLUPGROUP('Due Date Status'[Status Message], 'Due Date Status'[Status]), "IsGrandTotalColumnTotal"
+			),
+			__DS0FilterTable,
+			"CountStatus", CALCULATE(COUNTA('ADI Log'[Status]))
+		)
+
+	VAR __DS0CoreOnlyOutputTotals = 
+		SELECTCOLUMNS(
+			KEEPFILTERS(FILTER(KEEPFILTERS(__DS0Core), [IsGrandTotalColumnTotal] = FALSE)),
+			"'ADI Log'[Assigned To.title]", 'ADI Log'[Assigned To.title],
+			"'Due Date Status'[Status Message]", 'Due Date Status'[Status Message],
+			"'Due Date Status'[Status]", 'Due Date Status'[Status],
+			"CountStatus", [CountStatus]
+		)
+
+	VAR __DS0CoreTableByDM0 = 
+		SELECTCOLUMNS(
+			KEEPFILTERS(FILTER(KEEPFILTERS(__DS0Core), [IsGrandTotalColumnTotal] = TRUE)),
+			"'ADI Log'[Assigned To.title]", 'ADI Log'[Assigned To.title],
+			"SortBy_DM0_0", [CountStatus]
+		)
+
+	VAR __DS0PrimaryWithSortColumns = 
+		NATURALLEFTOUTERJOIN(
+			SUMMARIZE(__DS0Core, 'ADI Log'[Assigned To.title]),
+			__DS0CoreTableByDM0
+		)
+
+	VAR __DS0PrimaryWindowed = 
+		TOPN(201, __DS0PrimaryWithSortColumns, [SortBy_DM0_0], 0, 'ADI Log'[Assigned To.title], 1)
+
+	VAR __DS0SecondaryBase = 
+		SUMMARIZE(
+			__DS0CoreOnlyOutputTotals,
+			'Due Date Status'[Status Message],
+			'Due Date Status'[Status]
+		)
+
+	VAR __DS0Secondary = 
+		TOPN(
+			62,
+			__DS0SecondaryBase,
+			'Due Date Status'[Status],
+			1,
+			'Due Date Status'[Status Message],
+			1
+		)
+
+	VAR __DS0BodyLimited = 
+		NATURALLEFTOUTERJOIN(
+			__DS0PrimaryWindowed,
+			SUBSTITUTEWITHINDEX(
+				__DS0CoreOnlyOutputTotals,
+				"ColumnIndex",
+				__DS0Secondary,
+				'Due Date Status'[Status],
+				ASC,
+				'Due Date Status'[Status Message],
+				ASC
+			)
+		)
+
+EVALUATE
+	__DS0Secondary
+
+ORDER BY
+	'Due Date Status'[Status], 'Due Date Status'[Status Message]
+
+EVALUATE
+	__DS0BodyLimited
+
+ORDER BY
+	[SortBy_DM0_0] DESC, 'ADI Log'[Assigned To.title], [ColumnIndex]</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="Status_Message">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>Due Date Status[Status Message]</DataField>
+        </Field>
+        <Field Name="Status">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>Due Date Status[Status]</DataField>
+        </Field>
+      </Fields>
+    </DataSet>
+    <DataSet Name="Matrix">
+      <Query>
+        <DataSourceName>PBI_WS_RWATestDashboard_iCueADIlogDueDate</DataSourceName>
+        <rd:DesignerState>
+          <QueryDefinition xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/AnalysisServices/QueryDefinition">
+            <CommandType>DAX</CommandType>
+            <Type>Query</Type>
+            <QuerySpecification xsi:type="MDXQuerySpecification">
+              <Select>
+                <Items>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>Due Date Status</DimensionName>
+                      <HierarchyName>Status Message</HierarchyName>
+                      <HierarchyUniqueName>[Due Date Status].[Status Message]</HierarchyUniqueName>
+                      <LevelName>Status Message</LevelName>
+                      <UniqueName>[Due Date Status].[Status Message].[Status Message]</UniqueName>
+                    </ID>
+                    <ItemCaption>Status Message</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>Due Date Status</DimensionName>
+                      <HierarchyName>Status</HierarchyName>
+                      <HierarchyUniqueName>[Due Date Status].[Status]</HierarchyUniqueName>
+                      <LevelName>Status</LevelName>
+                      <UniqueName>[Due Date Status].[Status].[Status]</UniqueName>
+                    </ID>
+                    <ItemCaption>Status</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Column">
+                      <ColumnName>[IsGrandTotalColumnTotal]</ColumnName>
+                    </ID>
+                    <ItemCaption>IsGrandTotalColumnTotal</ItemCaption>
+                  </Item>
+                </Items>
+              </Select>
+              <AutoExecute>false</AutoExecute>
+              <From>Model</From>
+              <Filter>
+                <FilterItems />
+              </Filter>
+              <Calculations />
+              <Aggregates />
+              <QueryProperties />
+            </QuerySpecification>
+            <Query>
+              <Statement>// DAX Query
+DEFINE
+	VAR __DS0FilterTable = 
+		FILTER(
+			KEEPFILTERS(VALUES('Due Date Status'[Status Message])),
+			NOT('Due Date Status'[Status Message] IN {"N/A"})
+		)
+
+	VAR __DS0Core = 
+		SUMMARIZECOLUMNS(
+			ROLLUPADDISSUBTOTAL('ADI Log'[Assigned To.title], "IsGrandTotalRowTotal"),
+			ROLLUPADDISSUBTOTAL(
+				ROLLUPGROUP('Due Date Status'[Status Message], 'Due Date Status'[Status]), "IsGrandTotalColumnTotal"
+			),
+			__DS0FilterTable,
+			"CountStatus", CALCULATE(COUNTA('ADI Log'[Status]))
+		)
+
+	VAR __DS0PrimaryWindowed = 
+		TOPN(
+			102,
+			SUMMARIZE(__DS0Core, 'ADI Log'[Assigned To.title], [IsGrandTotalRowTotal]),
+			[IsGrandTotalRowTotal],
+			0,
+			'ADI Log'[Assigned To.title],
+			0
+		)
+
+	VAR __DS0SecondaryBase = 
+		SUMMARIZE(
+			__DS0Core,
+			'Due Date Status'[Status Message],
+			'Due Date Status'[Status],
+			[IsGrandTotalColumnTotal]
+		)
+
+	VAR __DS0Secondary = 
+		TOPN(
+			102,
+			__DS0SecondaryBase,
+			[IsGrandTotalColumnTotal],
+			1,
+			'Due Date Status'[Status],
+			1,
+			'Due Date Status'[Status Message],
+			1
+		)
+
+	VAR __DS0BodyLimited = 
+		NATURALLEFTOUTERJOIN(
+			__DS0PrimaryWindowed,
+			SUBSTITUTEWITHINDEX(
+				__DS0Core,
+				"ColumnIndex",
+				__DS0Secondary,
+				[IsGrandTotalColumnTotal],
+				ASC,
+				'Due Date Status'[Status],
+				ASC,
+				'Due Date Status'[Status Message],
+				ASC
+			)
+		)
+
+EVALUATE
+	__DS0Secondary
+
+ORDER BY
+	[IsGrandTotalColumnTotal],
+	'Due Date Status'[Status],
+	'Due Date Status'[Status Message]
+
+EVALUATE
+	__DS0BodyLimited
+
+ORDER BY
+	[IsGrandTotalRowTotal] DESC, 'ADI Log'[Assigned To.title] DESC, [ColumnIndex]
+</Statement>
+              <ParameterDefinitions />
+            </Query>
+          </QueryDefinition>
+        </rd:DesignerState>
+        <CommandText>// DAX Query
+DEFINE
+	VAR __DS0FilterTable = 
+		FILTER(
+			KEEPFILTERS(VALUES('Due Date Status'[Status Message])),
+			NOT('Due Date Status'[Status Message] IN {"N/A"})
+		)
+
+	VAR __DS0Core = 
+		SUMMARIZECOLUMNS(
+			ROLLUPADDISSUBTOTAL('ADI Log'[Assigned To.title], "IsGrandTotalRowTotal"),
+			ROLLUPADDISSUBTOTAL(
+				ROLLUPGROUP('Due Date Status'[Status Message], 'Due Date Status'[Status]), "IsGrandTotalColumnTotal"
+			),
+			__DS0FilterTable,
+			"CountStatus", CALCULATE(COUNTA('ADI Log'[Status]))
+		)
+
+	VAR __DS0PrimaryWindowed = 
+		TOPN(
+			102,
+			SUMMARIZE(__DS0Core, 'ADI Log'[Assigned To.title], [IsGrandTotalRowTotal]),
+			[IsGrandTotalRowTotal],
+			0,
+			'ADI Log'[Assigned To.title],
+			0
+		)
+
+	VAR __DS0SecondaryBase = 
+		SUMMARIZE(
+			__DS0Core,
+			'Due Date Status'[Status Message],
+			'Due Date Status'[Status],
+			[IsGrandTotalColumnTotal]
+		)
+
+	VAR __DS0Secondary = 
+		TOPN(
+			102,
+			__DS0SecondaryBase,
+			[IsGrandTotalColumnTotal],
+			1,
+			'Due Date Status'[Status],
+			1,
+			'Due Date Status'[Status Message],
+			1
+		)
+
+	VAR __DS0BodyLimited = 
+		NATURALLEFTOUTERJOIN(
+			__DS0PrimaryWindowed,
+			SUBSTITUTEWITHINDEX(
+				__DS0Core,
+				"ColumnIndex",
+				__DS0Secondary,
+				[IsGrandTotalColumnTotal],
+				ASC,
+				'Due Date Status'[Status],
+				ASC,
+				'Due Date Status'[Status Message],
+				ASC
+			)
+		)
+
+EVALUATE
+	__DS0Secondary
+
+ORDER BY
+	[IsGrandTotalColumnTotal],
+	'Due Date Status'[Status],
+	'Due Date Status'[Status Message]
+
+EVALUATE
+	__DS0BodyLimited
+
+ORDER BY
+	[IsGrandTotalRowTotal] DESC, 'ADI Log'[Assigned To.title] DESC, [ColumnIndex]</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="Status_Message">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>Due Date Status[Status Message]</DataField>
+        </Field>
+        <Field Name="Status">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>Due Date Status[Status]</DataField>
+        </Field>
+        <Field Name="IsGrandTotalColumnTotal">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>[IsGrandTotalColumnTotal]</DataField>
+        </Field>
+      </Fields>
+    </DataSet>
+    <DataSet Name="ADI_Log">
+      <Query>
+        <DataSourceName>PBI_WS_RWATestDashboard_iCueADIlogDueDate</DataSourceName>
+        <rd:DesignerState>
+          <QueryDefinition xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/AnalysisServices/QueryDefinition">
+            <CommandType>DAX</CommandType>
+            <Type>Query</Type>
+            <QuerySpecification xsi:type="MDXQuerySpecification">
+              <Select>
+                <Items>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>ID</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[ID]</HierarchyUniqueName>
+                      <LevelName>ID</LevelName>
+                      <UniqueName>[ADI Log].[ID].[ID]</UniqueName>
+                    </ID>
+                    <ItemCaption>ID</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>Title</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[Title]</HierarchyUniqueName>
+                      <LevelName>Title</LevelName>
+                      <UniqueName>[ADI Log].[Title].[Title]</UniqueName>
+                    </ID>
+                    <ItemCaption>Title</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>ADI Status</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[ADI Status]</HierarchyUniqueName>
+                      <LevelName>ADI Status</LevelName>
+                      <UniqueName>[ADI Log].[ADI Status].[ADI Status]</UniqueName>
+                    </ID>
+                    <ItemCaption>ADI Status</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>Due Date</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[Due Date]</HierarchyUniqueName>
+                      <LevelName>Due Date</LevelName>
+                      <UniqueName>[ADI Log].[Due Date].[Due Date]</UniqueName>
+                    </ID>
+                    <ItemCaption>Due Date</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>Assigned To.title</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[Assigned To.title]</HierarchyUniqueName>
+                      <LevelName>Assigned To.title</LevelName>
+                      <UniqueName>[ADI Log].[Assigned To.title].[Assigned To.title]</UniqueName>
+                    </ID>
+                    <ItemCaption>Assigned To.title</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>Due Date Status</DimensionName>
+                      <HierarchyName>Status Message</HierarchyName>
+                      <HierarchyUniqueName>[Due Date Status].[Status Message]</HierarchyUniqueName>
+                      <LevelName>Status Message</LevelName>
+                      <UniqueName>[Due Date Status].[Status Message].[Status Message]</UniqueName>
+                    </ID>
+                    <ItemCaption>Status Message</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>Due Date Status</DimensionName>
+                      <HierarchyName>Status</HierarchyName>
+                      <HierarchyUniqueName>[Due Date Status].[Status]</HierarchyUniqueName>
+                      <LevelName>Status</LevelName>
+                      <UniqueName>[Due Date Status].[Status].[Status]</UniqueName>
+                    </ID>
+                    <ItemCaption>Status</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>URL</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[URL]</HierarchyUniqueName>
+                      <LevelName>URL</LevelName>
+                      <UniqueName>[ADI Log].[URL].[URL]</UniqueName>
+                    </ID>
+                    <ItemCaption>URL</ItemCaption>
+                  </Item>
+                  <Item>
+                    <ID xsi:type="Level">
+                      <DimensionName>ADI Log</DimensionName>
+                      <HierarchyName>ADI Type</HierarchyName>
+                      <HierarchyUniqueName>[ADI Log].[ADI Type]</HierarchyUniqueName>
+                      <LevelName>ADI Type</LevelName>
+                      <UniqueName>[ADI Log].[ADI Type].[ADI Type]</UniqueName>
+                    </ID>
+                    <ItemCaption>ADI Type</ItemCaption>
+                  </Item>
+                </Items>
+              </Select>
+              <AutoExecute>false</AutoExecute>
+              <From>Model</From>
+              <Filter>
+                <FilterItems />
+              </Filter>
+              <Calculations />
+              <Aggregates />
+              <QueryProperties />
+            </QuerySpecification>
+            <Query>
+              <Statement>// DAX Query
+DEFINE
+	VAR __DS0FilterTable = 
+		FILTER(
+			KEEPFILTERS(VALUES('Due Date Status'[Status Message])),
+			NOT('Due Date Status'[Status Message] IN {"N/A"})
+		)
+
+	VAR __DS0Core = 
+		SELECTCOLUMNS(
+			KEEPFILTERS(
+				FILTER(
+					KEEPFILTERS(
+						SUMMARIZECOLUMNS(
+							'ADI Log'[ID],
+							'ADI Log'[Title],
+							'ADI Log'[ADI Status],
+							'ADI Log'[Due Date],
+							'ADI Log'[Assigned To.title],
+							'Due Date Status'[Status Message],
+							'Due Date Status'[Status],
+							'ADI Log'[URL],
+							'ADI Log'[ADI Type],
+							__DS0FilterTable,
+							"CountRowsADI_Log", CALCULATE(COUNTROWS('ADI Log'))
+						)
+					),
+					OR(
+						OR(
+							OR(
+								OR(
+									OR(
+										OR(
+											OR(
+												OR(
+													NOT(ISBLANK('ADI Log'[ID])),
+													NOT(ISBLANK('ADI Log'[Title]))
+												),
+												NOT(ISBLANK('ADI Log'[ADI Status]))
+											),
+											NOT(ISBLANK('ADI Log'[Due Date]))
+										),
+										NOT(ISBLANK('ADI Log'[Assigned To.title]))
+									),
+									NOT(ISBLANK('Due Date Status'[Status Message]))
+								),
+								NOT(ISBLANK('Due Date Status'[Status]))
+							),
+							NOT(ISBLANK('ADI Log'[URL]))
+						),
+						NOT(ISBLANK('ADI Log'[ADI Type]))
+					)
+				)
+			),
+			"'ADI Log'[ID]", 'ADI Log'[ID],
+			"'ADI Log'[Title]", 'ADI Log'[Title],
+			"'ADI Log'[ADI Status]", 'ADI Log'[ADI Status],
+			"'ADI Log'[Due Date]", 'ADI Log'[Due Date],
+			"'ADI Log'[Assigned To.title]", 'ADI Log'[Assigned To.title],
+			"'Due Date Status'[Status Message]", 'Due Date Status'[Status Message],
+			"'Due Date Status'[Status]", 'Due Date Status'[Status],
+			"'ADI Log'[URL]", 'ADI Log'[URL],
+			"'ADI Log'[ADI Type]", 'ADI Log'[ADI Type]
+		)
+
+	VAR __DS0PrimaryWindowed = 
+		TOPN(
+			501,
+			__DS0Core,
+			'ADI Log'[Title],
+			1,
+			'ADI Log'[ID],
+			1,
+			'ADI Log'[ADI Status],
+			1,
+			'ADI Log'[Due Date],
+			1,
+			'ADI Log'[Assigned To.title],
+			1,
+			'Due Date Status'[Status],
+			1,
+			'Due Date Status'[Status Message],
+			1,
+			'ADI Log'[URL],
+			1,
+			'ADI Log'[ADI Type],
+			1
+		)
+
+EVALUATE
+	__DS0PrimaryWindowed
+
+ORDER BY
+	'ADI Log'[Title],
+	'ADI Log'[ID],
+	'ADI Log'[ADI Status],
+	'ADI Log'[Due Date],
+	'ADI Log'[Assigned To.title],
+	'Due Date Status'[Status],
+	'Due Date Status'[Status Message],
+	'ADI Log'[URL],
+	'ADI Log'[ADI Type]
+</Statement>
+              <ParameterDefinitions />
+            </Query>
+          </QueryDefinition>
+        </rd:DesignerState>
+        <CommandText>// DAX Query
+DEFINE
+	VAR __DS0FilterTable = 
+		FILTER(
+			KEEPFILTERS(VALUES('Due Date Status'[Status Message])),
+			NOT('Due Date Status'[Status Message] IN {"N/A"})
+		)
+
+	VAR __DS0Core = 
+		SELECTCOLUMNS(
+			KEEPFILTERS(
+				FILTER(
+					KEEPFILTERS(
+						SUMMARIZECOLUMNS(
+							'ADI Log'[ID],
+							'ADI Log'[Title],
+							'ADI Log'[ADI Status],
+							'ADI Log'[Due Date],
+							'ADI Log'[Assigned To.title],
+							'Due Date Status'[Status Message],
+							'Due Date Status'[Status],
+							'ADI Log'[URL],
+							'ADI Log'[ADI Type],
+							__DS0FilterTable,
+							"CountRowsADI_Log", CALCULATE(COUNTROWS('ADI Log'))
+						)
+					),
+					OR(
+						OR(
+							OR(
+								OR(
+									OR(
+										OR(
+											OR(
+												OR(
+													NOT(ISBLANK('ADI Log'[ID])),
+													NOT(ISBLANK('ADI Log'[Title]))
+												),
+												NOT(ISBLANK('ADI Log'[ADI Status]))
+											),
+											NOT(ISBLANK('ADI Log'[Due Date]))
+										),
+										NOT(ISBLANK('ADI Log'[Assigned To.title]))
+									),
+									NOT(ISBLANK('Due Date Status'[Status Message]))
+								),
+								NOT(ISBLANK('Due Date Status'[Status]))
+							),
+							NOT(ISBLANK('ADI Log'[URL]))
+						),
+						NOT(ISBLANK('ADI Log'[ADI Type]))
+					)
+				)
+			),
+			"'ADI Log'[ID]", 'ADI Log'[ID],
+			"'ADI Log'[Title]", 'ADI Log'[Title],
+			"'ADI Log'[ADI Status]", 'ADI Log'[ADI Status],
+			"'ADI Log'[Due Date]", 'ADI Log'[Due Date],
+			"'ADI Log'[Assigned To.title]", 'ADI Log'[Assigned To.title],
+			"'Due Date Status'[Status Message]", 'Due Date Status'[Status Message],
+			"'Due Date Status'[Status]", 'Due Date Status'[Status],
+			"'ADI Log'[URL]", 'ADI Log'[URL],
+			"'ADI Log'[ADI Type]", 'ADI Log'[ADI Type]
+		)
+
+	VAR __DS0PrimaryWindowed = 
+		TOPN(
+			501,
+			__DS0Core,
+			'ADI Log'[Title],
+			1,
+			'ADI Log'[ID],
+			1,
+			'ADI Log'[ADI Status],
+			1,
+			'ADI Log'[Due Date],
+			1,
+			'ADI Log'[Assigned To.title],
+			1,
+			'Due Date Status'[Status],
+			1,
+			'Due Date Status'[Status Message],
+			1,
+			'ADI Log'[URL],
+			1,
+			'ADI Log'[ADI Type],
+			1
+		)
+
+EVALUATE
+	__DS0PrimaryWindowed
+
+ORDER BY
+	'ADI Log'[Title],
+	'ADI Log'[ID],
+	'ADI Log'[ADI Status],
+	'ADI Log'[Due Date],
+	'ADI Log'[Assigned To.title],
+	'Due Date Status'[Status],
+	'Due Date Status'[Status Message],
+	'ADI Log'[URL],
+	'ADI Log'[ADI Type]
+</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="ID">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[ID]</DataField>
+        </Field>
+        <Field Name="Title">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[Title]</DataField>
+        </Field>
+        <Field Name="ADI_Status">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[ADI Status]</DataField>
+        </Field>
+        <Field Name="Due_Date">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[Due Date]</DataField>
+        </Field>
+        <Field Name="Assigned_To_title">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[Assigned To.title]</DataField>
+        </Field>
+        <Field Name="Status_Message">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>Due Date Status[Status Message]</DataField>
+        </Field>
+        <Field Name="Status">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>Due Date Status[Status]</DataField>
+        </Field>
+        <Field Name="URL">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[URL]</DataField>
+        </Field>
+        <Field Name="ADI_Type">
+          <rd:TypeName>System.String</rd:TypeName>
+          <DataField>ADI Log[ADI Type]</DataField>
+        </Field>
+      </Fields>
+    </DataSet>
+  </DataSets>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Tablix Name="Tablix1">
+            <TablixCorner>
+              <TablixCornerRows>
+                <TablixCornerRow>
+                  <TablixCornerCell>
+                    <CellContents>
+                      <Textbox Name="Textbox4">
+                        <rd:DefaultName>Textbox4</rd:DefaultName>
+                        <CanGrow>true</CanGrow>
+                        <KeepTogether>true</KeepTogether>
+                        <Paragraphs>
+                          <Paragraph>
+                            <TextRuns>
+                              <TextRun>
+                                <Value>Assigned To title</Value>
+                                <Style>
+                                  <FontSize>11pt</FontSize>
+                                  <FontWeight>Bold</FontWeight>
+                                  <Color>#666666</Color>
+                                </Style>
+                              </TextRun>
+                            </TextRuns>
+                            <Style>
+                              <TextAlign>Left</TextAlign>
+                            </Style>
+                          </Paragraph>
+                        </Paragraphs>
+                        <Style>
+                          <Border>
+                            <Style>None</Style>
+                          </Border>
+                          <BottomBorder>
+                            <Color>="#118DFF"</Color>
+                            <Style>Solid</Style>
+                            <Width>1pt</Width>
+                          </BottomBorder>
+                          <BackgroundColor>White</BackgroundColor>
+                          <PaddingLeft>2pt</PaddingLeft>
+                          <PaddingRight>2pt</PaddingRight>
+                          <PaddingTop>2pt</PaddingTop>
+                          <PaddingBottom>2pt</PaddingBottom>
+                        </Style>
+                      </Textbox>
+                    </CellContents>
+                  </TablixCornerCell>
+                  <TablixCornerCell>
+                    <CellContents>
+                      <Textbox Name="Textbox11">
+                        <rd:DefaultName>Textbox11</rd:DefaultName>
+                        <CanGrow>true</CanGrow>
+                        <KeepTogether>true</KeepTogether>
+                        <Paragraphs>
+                          <Paragraph>
+                            <TextRuns>
+                              <TextRun>
+                                <Value>Group1</Value>
+                                <Style>
+                                  <FontSize>11pt</FontSize>
+                                  <FontWeight>Bold</FontWeight>
+                                  <Color>#666666</Color>
+                                </Style>
+                              </TextRun>
+                            </TextRuns>
+                            <Style>
+                              <TextAlign>Left</TextAlign>
+                            </Style>
+                          </Paragraph>
+                        </Paragraphs>
+                        <Style>
+                          <Border>
+                            <Style>None</Style>
+                          </Border>
+                          <BottomBorder>
+                            <Color>="#118DFF"</Color>
+                            <Style>Solid</Style>
+                            <Width>1pt</Width>
+                          </BottomBorder>
+                          <BackgroundColor>White</BackgroundColor>
+                          <PaddingLeft>2pt</PaddingLeft>
+                          <PaddingRight>2pt</PaddingRight>
+                          <PaddingTop>2pt</PaddingTop>
+                          <PaddingBottom>2pt</PaddingBottom>
+                        </Style>
+                      </Textbox>
+                    </CellContents>
+                  </TablixCornerCell>
+                </TablixCornerRow>
+              </TablixCornerRows>
+            </TablixCorner>
+            <TablixBody>
+              <TablixColumns>
+                <TablixColumn>
+                  <Width>1.27604in</Width>
+                </TablixColumn>
+                <TablixColumn>
+                  <Width>0.41667in</Width>
+                </TablixColumn>
+              </TablixColumns>
+              <TablixRows>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="ID">
+                          <rd:DefaultName>ID</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Count(Fields!ID.Value)</Value>
+                                  <Style>
+                                    <FontWeight>Normal</FontWeight>
+                                    <Color>#333333</Color>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style />
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BottomBorder>
+                              <Color>LightGrey</Color>
+                            </BottomBorder>
+                            <BackgroundColor>=IIF(VAL(ReportItems!ROWCOLOR.Value) MOD 2,"White","#EEEDED")</BackgroundColor>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox9">
+                          <rd:DefaultName>Textbox9</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Count(Fields!ID.Value)</Value>
+                                  <Style>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Color>#333333</Color>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style />
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <TopBorder>
+                              <Width>1pt</Width>
+                            </TopBorder>
+                            <BottomBorder>
+                              <Color>LightGrey</Color>
+                              <Style>None</Style>
+                            </BottomBorder>
+                            <BackgroundColor>=IIF(VAL(ReportItems!ROWCOLOR.Value) MOD 2,"White","#EEEDED")</BackgroundColor>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+                <TablixRow>
+                  <Height>0.25in</Height>
+                  <TablixCells>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox7">
+                          <rd:DefaultName>Textbox7</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Count(Fields!ID.Value)</Value>
+                                  <Style>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Color>#333333</Color>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style />
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BackgroundColor>White</BackgroundColor>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                    <TablixCell>
+                      <CellContents>
+                        <Textbox Name="Textbox10">
+                          <rd:DefaultName>Textbox10</rd:DefaultName>
+                          <CanGrow>true</CanGrow>
+                          <KeepTogether>true</KeepTogether>
+                          <Paragraphs>
+                            <Paragraph>
+                              <TextRuns>
+                                <TextRun>
+                                  <Value>=Count(Fields!ID.Value)</Value>
+                                  <Style>
+                                    <FontWeight>Bold</FontWeight>
+                                    <Color>#333333</Color>
+                                  </Style>
+                                </TextRun>
+                              </TextRuns>
+                              <Style />
+                            </Paragraph>
+                          </Paragraphs>
+                          <Style>
+                            <Border>
+                              <Style>None</Style>
+                            </Border>
+                            <BackgroundColor>White</BackgroundColor>
+                            <PaddingLeft>2pt</PaddingLeft>
+                            <PaddingRight>2pt</PaddingRight>
+                            <PaddingTop>2pt</PaddingTop>
+                            <PaddingBottom>2pt</PaddingBottom>
+                          </Style>
+                        </Textbox>
+                      </CellContents>
+                    </TablixCell>
+                  </TablixCells>
+                </TablixRow>
+              </TablixRows>
+            </TablixBody>
+            <TablixColumnHierarchy>
+              <TablixMembers>
+                <TablixMember>
+                  <Group Name="Status_Message">
+                    <GroupExpressions>
+                      <GroupExpression>=Fields!Status_Message.Value</GroupExpression>
+                    </GroupExpressions>
+                  </Group>
+                  <SortExpressions>
+                    <SortExpression>
+                      <Value>=Fields!Status.Value</Value>
+                    </SortExpression>
+                  </SortExpressions>
+                  <TablixHeader>
+                    <Size>0.25in</Size>
+                    <CellContents>
+                      <Textbox Name="Status_Message">
+                        <rd:DefaultName>Status_Message</rd:DefaultName>
+                        <CanGrow>true</CanGrow>
+                        <KeepTogether>true</KeepTogether>
+                        <Paragraphs>
+                          <Paragraph>
+                            <TextRuns>
+                              <TextRun>
+                                <Value>=Fields!Status_Message.Value</Value>
+                                <Style>
+                                  <FontWeight>Normal</FontWeight>
+                                  <Color>#333333</Color>
+                                </Style>
+                              </TextRun>
+                            </TextRuns>
+                            <Style>
+                              <TextAlign>Right</TextAlign>
+                            </Style>
+                          </Paragraph>
+                        </Paragraphs>
+                        <Style>
+                          <Border>
+                            <Style>None</Style>
+                          </Border>
+                          <BottomBorder>
+                            <Color>="#118DFF"</Color>
+                            <Style>Solid</Style>
+                            <Width>1pt</Width>
+                          </BottomBorder>
+                          <BackgroundColor>White</BackgroundColor>
+                          <PaddingLeft>2pt</PaddingLeft>
+                          <PaddingRight>2pt</PaddingRight>
+                          <PaddingTop>2pt</PaddingTop>
+                          <PaddingBottom>2pt</PaddingBottom>
+                        </Style>
+                      </Textbox>
+                    </CellContents>
+                  </TablixHeader>
+                  <TablixMembers>
+                    <TablixMember />
+                  </TablixMembers>
+                </TablixMember>
+                <TablixMember>
+                  <TablixHeader>
+                    <Size>0.25in</Size>
+                    <CellContents>
+                      <Textbox Name="Textbox8">
+                        <rd:DefaultName>Textbox8</rd:DefaultName>
+                        <CanGrow>true</CanGrow>
+                        <KeepTogether>true</KeepTogether>
+                        <Paragraphs>
+                          <Paragraph>
+                            <TextRuns>
+                              <TextRun>
+                                <Value>Total</Value>
+                                <Style>
+                                  <FontWeight>Bold</FontWeight>
+                                  <Color>#333333</Color>
+                                </Style>
+                              </TextRun>
+                            </TextRuns>
+                            <Style>
+                              <TextAlign>Right</TextAlign>
+                            </Style>
+                          </Paragraph>
+                        </Paragraphs>
+                        <Style>
+                          <Border>
+                            <Style>None</Style>
+                          </Border>
+                          <BottomBorder>
+                            <Color>="#118DFF"</Color>
+                            <Style>Solid</Style>
+                            <Width>1pt</Width>
+                          </BottomBorder>
+                          <BackgroundColor>White</BackgroundColor>
+                          <PaddingLeft>2pt</PaddingLeft>
+                          <PaddingRight>2pt</PaddingRight>
+                          <PaddingTop>2pt</PaddingTop>
+                          <PaddingBottom>2pt</PaddingBottom>
+                        </Style>
+                      </Textbox>
+                    </CellContents>
+                  </TablixHeader>
+                </TablixMember>
+              </TablixMembers>
+            </TablixColumnHierarchy>
+            <TablixRowHierarchy>
+              <TablixMembers>
+                <TablixMember>
+                  <Group Name="Assigned_To_title">
+                    <GroupExpressions>
+                      <GroupExpression>=Fields!Assigned_To_title.Value</GroupExpression>
+                    </GroupExpressions>
+                  </Group>
+                  <SortExpressions>
+                    <SortExpression>
+                      <Value>=Count(Fields!ID.Value)</Value>
+                      <Direction>Descending</Direction>
+                    </SortExpression>
+                  </SortExpressions>
+                  <TablixHeader>
+                    <Size>1.81771in</Size>
+                    <CellContents>
+                      <Textbox Name="Assigned_To_title">
+                        <rd:DefaultName>Assigned_To_title</rd:DefaultName>
+                        <CanGrow>true</CanGrow>
+                        <KeepTogether>true</KeepTogether>
+                        <Paragraphs>
+                          <Paragraph>
+                            <TextRuns>
+                              <TextRun>
+                                <Value>=Fields!Assigned_To_title.Value</Value>
+                                <Style>
+                                  <FontWeight>Normal</FontWeight>
+                                  <Color>#333333</Color>
+                                </Style>
+                              </TextRun>
+                            </TextRuns>
+                            <Style />
+                          </Paragraph>
+                        </Paragraphs>
+                        <Style>
+                          <Border>
+                            <Style>None</Style>
+                          </Border>
+                          <BottomBorder>
+                            <Color>LightGrey</Color>
+                            <Style>None</Style>
+                            <Width>1pt</Width>
+                          </BottomBorder>
+                          <RightBorder>
+                            <Color>="#118DFF"</Color>
+                            <Style>Solid</Style>
+                            <Width>1pt</Width>
+                          </RightBorder>
+                          <BackgroundColor>=IIF(RunningValue(Fields!Assigned_To_title.Value,countDistinct,Nothing) MOD 2,"White","#EEEDED")</BackgroundColor>
+                          <PaddingLeft>2pt</PaddingLeft>
+                          <PaddingRight>2pt</PaddingRight>
+                          <PaddingTop>2pt</PaddingTop>
+                          <PaddingBottom>2pt</PaddingBottom>
+                        </Style>
+                      </Textbox>
+                    </CellContents>
+                  </TablixHeader>
+                  <TablixMembers>
+                    <TablixMember>
+                      <Group Name="Group1">
+                        <GroupExpressions>
+                          <GroupExpression>1</GroupExpression>
+                        </GroupExpressions>
+                      </Group>
+                      <SortExpressions>
+                        <SortExpression>
+                          <Value>1</Value>
+                        </SortExpression>
+                      </SortExpressions>
+                      <TablixHeader>
+                        <Size>0.03125in</Size>
+                        <CellContents>
+                          <Textbox Name="ROWCOLOR">
+                            <CanGrow>true</CanGrow>
+                            <KeepTogether>true</KeepTogether>
+                            <Paragraphs>
+                              <Paragraph>
+                                <TextRuns>
+                                  <TextRun>
+                                    <Value>=RunningValue(Fields!Assigned_To_title.Value,countDistinct,Nothing)</Value>
+                                    <Style>
+                                      <FontWeight>Normal</FontWeight>
+                                      <Color>#333333</Color>
+                                    </Style>
+                                  </TextRun>
+                                </TextRuns>
+                                <Style />
+                              </Paragraph>
+                            </Paragraphs>
+                            <Style>
+                              <Border>
+                                <Style>None</Style>
+                              </Border>
+                              <BottomBorder>
+                                <Color>LightGrey</Color>
+                                <Style>None</Style>
+                              </BottomBorder>
+                              <BackgroundColor>=IIF(VAL(ReportItems!ROWCOLOR.Value) MOD 2,"White","#EEEDED")</BackgroundColor>
+                              <PaddingLeft>2pt</PaddingLeft>
+                              <PaddingRight>2pt</PaddingRight>
+                              <PaddingTop>2pt</PaddingTop>
+                              <PaddingBottom>2pt</PaddingBottom>
+                            </Style>
+                          </Textbox>
+                        </CellContents>
+                      </TablixHeader>
+                      <TablixMembers>
+                        <TablixMember />
+                      </TablixMembers>
+                    </TablixMember>
+                  </TablixMembers>
+                </TablixMember>
+                <TablixMember>
+                  <TablixHeader>
+                    <Size>1.81771in</Size>
+                    <CellContents>
+                      <Textbox Name="Textbox6">
+                        <rd:DefaultName>Textbox6</rd:DefaultName>
+                        <CanGrow>true</CanGrow>
+                        <KeepTogether>true</KeepTogether>
+                        <Paragraphs>
+                          <Paragraph>
+                            <TextRuns>
+                              <TextRun>
+                                <Value>Total</Value>
+                                <Style>
+                                  <FontWeight>Bold</FontWeight>
+                                  <Color>#333333</Color>
+                                </Style>
+                              </TextRun>
+                            </TextRuns>
+                            <Style />
+                          </Paragraph>
+                        </Paragraphs>
+                        <Style>
+                          <Border>
+                            <Style>None</Style>
+                          </Border>
+                          <RightBorder>
+                            <Color>="#118DFF"</Color>
+                            <Style>Solid</Style>
+                            <Width>1pt</Width>
+                          </RightBorder>
+                          <BackgroundColor>White</BackgroundColor>
+                          <PaddingLeft>2pt</PaddingLeft>
+                          <PaddingRight>2pt</PaddingRight>
+                          <PaddingTop>2pt</PaddingTop>
+                          <PaddingBottom>2pt</PaddingBottom>
+                        </Style>
+                      </Textbox>
+                    </CellContents>
+                  </TablixHeader>
+                  <TablixMembers>
+                    <TablixMember>
+                      <TablixHeader>
+                        <Size>0.03125in</Size>
+                        <CellContents>
+                          <Textbox Name="Textbox13">
+                            <rd:DefaultName>Textbox13</rd:DefaultName>
+                            <CanGrow>true</CanGrow>
+                            <KeepTogether>true</KeepTogether>
+                            <Paragraphs>
+                              <Paragraph>
+                                <TextRuns>
+                                  <TextRun>
+                                    <Value />
+                                    <Style>
+                                      <FontWeight>Bold</FontWeight>
+                                      <Color>#333333</Color>
+                                    </Style>
+                                  </TextRun>
+                                </TextRuns>
+                                <Style />
+                              </Paragraph>
+                            </Paragraphs>
+                            <Style>
+                              <Border>
+                                <Style>None</Style>
+                              </Border>
+                              <BackgroundColor>White</BackgroundColor>
+                              <PaddingLeft>2pt</PaddingLeft>
+                              <PaddingRight>2pt</PaddingRight>
+                              <PaddingTop>2pt</PaddingTop>
+                              <PaddingBottom>2pt</PaddingBottom>
+                            </Style>
+                          </Textbox>
+                        </CellContents>
+                      </TablixHeader>
+                    </TablixMember>
+                  </TablixMembers>
+                  <KeepWithGroup>Before</KeepWithGroup>
+                </TablixMember>
+              </TablixMembers>
+            </TablixRowHierarchy>
+            <DataSetName>ADI_Log</DataSetName>
+            <Top>0.62083in</Top>
+            <Height>0.75in</Height>
+            <Width>3.54167in</Width>
+            <Style>
+              <Border>
+                <Style>None</Style>
+              </Border>
+            </Style>
+          </Tablix>
+          <Textbox Name="ReportTitle">
+            <rd:WatermarkTextbox>Title</rd:WatermarkTextbox>
+            <rd:DefaultName>ReportTitle</rd:DefaultName>
+            <CanGrow>true</CanGrow>
+            <KeepTogether>true</KeepTogether>
+            <Paragraphs>
+              <Paragraph>
+                <TextRuns>
+                  <TextRun>
+                    <Label>DatasourceName</Label>
+                    <Value>iCue ADI-log Overview</Value>
+                    <Style>
+                      <FontFamily>Segoe UI Light</FontFamily>
+                      <FontSize>28pt</FontSize>
+                    </Style>
+                  </TextRun>
+                </TextRuns>
+                <Style>
+                  <TextAlign>Center</TextAlign>
+                </Style>
+              </Paragraph>
+            </Paragraphs>
+            <Height>0.5in</Height>
+            <Width>6.5in</Width>
+            <ZIndex>1</ZIndex>
+            <Style>
+              <Border>
+                <Style>None</Style>
+              </Border>
+              <PaddingLeft>2pt</PaddingLeft>
+              <PaddingRight>2pt</PaddingRight>
+              <PaddingTop>2pt</PaddingTop>
+              <PaddingBottom>2pt</PaddingBottom>
+            </Style>
+          </Textbox>
+        </ReportItems>
+        <Height>1.58611in</Height>
+        <Style>
+          <Border>
+            <Style>None</Style>
+          </Border>
+        </Style>
+      </Body>
+      <Width>6.5in</Width>
+      <Page>
+        <InteractiveHeight>11in</InteractiveHeight>
+        <InteractiveWidth>8.5in</InteractiveWidth>
+        <LeftMargin>1in</LeftMargin>
+        <TopMargin>1in</TopMargin>
+        <BottomMargin>1in</BottomMargin>
+        <Style>
+          <BackgroundColor>White</BackgroundColor>
+        </Style>
+      </Page>
+    </ReportSection>
+  </ReportSections>
+  <ReportParametersLayout>
+    <GridLayoutDefinition>
+      <NumberOfColumns>4</NumberOfColumns>
+      <NumberOfRows>2</NumberOfRows>
+    </GridLayoutDefinition>
+  </ReportParametersLayout>
+  <CustomProperties>
+    <CustomProperty>
+      <Name>ReportGeneratorTemplate</Name>
+      <Value>DefaultRDLForPBIDataset</Value>
+    </CustomProperty>
+  </CustomProperties>
+  <EmbeddedImages>
+    <EmbeddedImage Name="Itinerislogo">
+      <MIMEType>image/jpeg</MIMEType>
+      <ImageData>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</ImageData>
+    </EmbeddedImage>
+    <EmbeddedImage Name="iCue_Flat_Small">
+      <MIMEType>image/png</MIMEType>
+      <ImageData>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</ImageData>
+    </EmbeddedImage>
+  </EmbeddedImages>
+</Report>
